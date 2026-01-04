@@ -1,9 +1,9 @@
 import random
-from charm.toolbox.pairinggroup import PairingGroup, ZR, G1,G2, GT, pair
+from charm.toolbox.pairinggroup import PairingGroup, ZR, G1, GT, pair
 from MSP import MSP
 class AugRCPABE:
     
-    def __init__(self,m=2, group_name='MNT224'):
+    def __init__(self,m=2, group_name='SS512'):
         self.group = PairingGroup(group_name)
         self.m = m
         self.N = self.m * self.m
@@ -11,26 +11,24 @@ class AugRCPABE:
 
     def setup_A(self):
         m=self.m
-        g1 = self.group.random(G1)
-        g2 = self.group.random(G2)
+        g = self.group.random(G1)
         f = self.group.random(G1)
         h = self.group.random(G1)
         G = self.group.random(G1)
         H = self.group.random(G1)
         
-        e_gg = pair(g1, g2)
+        e_gg = pair(g, g)
         fx=[self.group.random(G1) for _ in range(m)]
         alpha = [self.group.random(ZR) for _ in range(m)]
         r = [self.group.random(ZR) for _ in range(m)]
         z = [self.group.random(ZR) for _ in range(m)]
         c = [self.group.random(ZR) for _ in range(m)]
         Ei = [e_gg ** alpha[i] for i in range(m)]
-        Gi = [g1 ** r[i] for i in range(m)]
-        Zi = [g1 ** z[i] for i in range(m)]
-        Hj = [g2 ** c[j] for j in range(m)]
+        Gi = [g ** r[i] for i in range(m)]
+        Zi = [g ** z[i] for i in range(m)]
+        Hj = [g ** c[j] for j in range(m)]
         pp = {
-            'g1': g1,
-            'g2': g2,   
+            'g': g,
             'f': f,
             'h': h,
             'fx': fx,
@@ -73,8 +71,8 @@ class AugRCPABE:
         idx = (msk['ctr'] - 1) % (self.m * self.m)
         i, j = self._ctr_to_pos(idx)
         sigma = self.group.random(ZR)
-        K_ij = (pp['g1'] ** msk['alpha'][i - 1]) * ((pp['Gi'][i - 1] ** msk['c'][j - 1])) * ((pp['f'] * pp['fx'][j - 1]) ** sigma)
-        Kp_ij = pp['g2'] ** sigma
+        K_ij = (pp['g'] ** msk['alpha'][i - 1]) * ((pp['Gi'][i - 1] ** msk['c'][j - 1])) * ((pp['f'] * pp['fx'][j - 1]) ** sigma)
+        Kp_ij = pp['g'] ** sigma
         Kpp_ij = pp['Zi'][i - 1] ** sigma
         barK = {}
         for jp in range(1, self.m + 1):
@@ -84,7 +82,7 @@ class AugRCPABE:
         Kp_attr = {}
         for x in S:
             delta = self.group.random(ZR)
-            K_attr[x] = pp['g2'] ** delta
+            K_attr[x] = pp['g'] ** delta
             Hz = (pp['H'] ** self._attr_to_zr(x)) * pp['h']
             Kp_attr[x] = (Hz ** delta) * (pp['G'] ** (-sigma))
         return {
@@ -131,7 +129,7 @@ class AugRCPABE:
             P[attr] = (pp['f'] ** acc) * (pp['G'] ** xi[attr])
             rho_z = self._attr_to_zr(self.msp.strip_index(attr))
             Pp[attr] = ((pp['H'] ** rho_z) * pp['h']) ** (-xi[attr])
-            Ppp[attr] = pp['g2'] ** xi[attr]
+            Ppp[attr] = pp['g'] ** xi[attr]
         revoked_set = set(R or [])
         Ri = {}
         Rp = {}
@@ -150,29 +148,29 @@ class AugRCPABE:
             if i<target_pos[0]:
                 vi=self._random_vec()
                 s_2=self.group.random(ZR)
-                Ri[i] = [pp['g1'] ** vi[k] for k in range(3)]
+                Ri[i] = [pp['g'] ** vi[k] for k in range(3)]
                 Rp[i] = [Ri[i][k] ** kappa for k in range(3)]
-                Q[i] = pp['g2'] ** (s[i - 1])
+                Q[i] = pp['g'] ** (s[i - 1])
                 Qp[i] = (F_prod)**(s[i - 1])*pp['Zi'][i - 1]**t[i - 1]*pp['f']**pi
-                Qpp[i] = pp['g2'] ** (t[i - 1])
+                Qpp[i] = pp['g'] ** (t[i - 1])
                 T[i] = (pp['Ei'][i - 1] ** s_2)
             elif i==target_pos[0]:
                 vi=self._random_vec()
                 dot_vi_vc = self._dot(vi, vc)
                 Ri[i] = [pp['Gi'][i - 1] ** (s[i - 1] * vi[k]) for k in range(3)]    
                 Rp[i] = [Ri[i][k] ** kappa for k in range(3)]
-                Q[i] = pp['g2'] ** (tau * s[i - 1] * dot_vi_vc)
+                Q[i] = pp['g'] ** (tau * s[i - 1] * dot_vi_vc)
                 Qp[i] = (F_prod)**(tau*s[i - 1]*dot_vi_vc)*pp['Zi'][i - 1]**t[i - 1]*pp['f']**pi
-                Qpp[i] = pp['g2'] ** (t[i - 1])
+                Qpp[i] = pp['g'] ** (t[i - 1])
                 T[i] = M * (pp['Ei'][i - 1] ** (tau * s[i - 1] * dot_vi_vc))
             elif i>target_pos[0]:
                 vi=[qx*v1[k]+qx1*v2[k] for k in range(3)]
                 dot_vi_vc = self._dot(vi, vc)
                 Ri[i] = [pp['Gi'][i - 1] ** (s[i - 1] * vi[k]) for k in range(3)]    
                 Rp[i] = [Ri[i][k] ** kappa for k in range(3)]
-                Q[i] = pp['g2'] ** (tau * s[i - 1] * dot_vi_vc)
+                Q[i] = pp['g'] ** (tau * s[i - 1] * dot_vi_vc)
                 Qp[i] = (F_prod)**(tau*s[i - 1]*dot_vi_vc)*pp['Zi'][i - 1]**t[i - 1]*pp['f']**pi
-                Qpp[i] = pp['g2'] ** (t[i - 1])
+                Qpp[i] = pp['g'] ** (t[i - 1])
                 T[i] = M * (pp['Ei'][i - 1] ** (tau * s[i - 1] * dot_vi_vc))
 
         C={}
@@ -181,8 +179,8 @@ class AugRCPABE:
             miu=self.group.random(ZR)
             vc_prime = [vc[k] + miu * v3[k] for k in range(3)] 
             current_vc = vc_prime if j < target_pos[1] else vc
-            C[j] = [pp['Hj'][j - 1] ** (tau * current_vc[k]) * (pp['g2'] ** (w[j][k] * kappa)) for k in range(3)]
-            Cp[j] = [pp['g2'] ** w[j][k] for k in range(3)]
+            C[j] = [pp['Hj'][j - 1] ** (tau * current_vc[k]) * (pp['g'] ** (w[j][k] * kappa)) for k in range(3)]
+            Cp[j] = [pp['g'] ** w[j][k] for k in range(3)]
         return {
             'policy': policy,
             'Ri':Ri,
@@ -218,7 +216,7 @@ class AugRCPABE:
         barK_i = SK['K_ij']
         for jp in bar_R_i:
             if jp != j:
-                barK_i = barK_i * SK['barK'].get(jp, pp['g1'] ** self.group.init(ZR, 0))
+                barK_i = barK_i * SK['barK'].get(jp, pp['g'] ** self.group.init(ZR, 0))
         Di_pre = (pair(barK_i, CT['Q'][i]) * pair(SK['Kpp_ij'], CT['Qpp'][i])) / pair(SK['Kp_ij'], CT['Qp'][i])
         num_pair = self.group.init(GT, 1)
         den_pair = self.group.init(GT, 1)
